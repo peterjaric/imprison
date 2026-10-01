@@ -1,6 +1,6 @@
 # imprison
 
-Runs the [pi](https://pi.dev) coding agent inside an isolated [smolvm](https://github.com/smol-machines/smolvm) VM, one machine per workspace directory, with the workspace mounted at `/workspace`.
+Runs the [pi](https://pi.dev) coding agent inside an isolated [smolvm](https://github.com/smol-machines/smolvm) VM.
 
 ## Getting started
 
