@@ -11,29 +11,27 @@ vm_dns_server() {
   resolvectl status | awk '/Current DNS Server:/ { print $NF; exit }'
 }
 
-# Compute the machine name for a workspace directory (defaults to $PWD).
+# Compute the machine name for a workspace directory.
 vm_machine_name() {
-  local workspace_dir="${1:-$PWD}"
-  local home="${HOME%/}"
-  case "$workspace_dir" in
-    "$home"/*) ;;
-    "$home") ;;
-    *)
-      echo "Workspace directory '$workspace_dir' is outside \$HOME; refusing to derive a machine name." >&2
-      return 1
-      ;;
-  esac
-  local rel="${workspace_dir#"$home"/}"
-  local name="${MACHINE_PREFIX}${rel//\//-}"
+  local workspace_dir="${1:?workspace_dir required}"
+  local base parent
+  base="$(basename "$workspace_dir")"
+  parent="$(basename "$(dirname "$workspace_dir")")"
+  local name
+  if [[ "$workspace_dir" == "/" || "$parent" == "/" ]]; then
+    name="${MACHINE_PREFIX}${base}"
+  else
+    name="${MACHINE_PREFIX}${parent}-${base}"
+  fi
   echo "${name,,}"
 }
 
-# True if the workspace directory is under $HOME/code (the expected convention).
-vm_is_under_code_dir() {
-  local workspace_dir="${1:-$PWD}"
-  local code_dir="${HOME%/}/code"
+# True if the workspace directory is inside $HOME.
+vm_is_under_home() {
+  local workspace_dir="${1:?workspace_dir required}"
+  local home="${HOME%/}"
   case "$workspace_dir" in
-    "$code_dir"/*|"$code_dir") return 0 ;;
+    "$home"/*|"$home") return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -243,7 +241,7 @@ vm_delete_all() {
 
 # Interactively select extra packages and write them to imprison.config.
 vm_write_config() {
-  local workspace_dir="${1:-$PWD}"
+  local workspace_dir="${1:?workspace_dir required}"
   local common_packages=(
     java-25-openjdk-devel
     mvn

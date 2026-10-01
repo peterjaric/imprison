@@ -49,7 +49,7 @@ resolve_workspace_dir() {
     echo "Workspace directory '$path' does not exist." >&2
     exit 1
   fi
-  readlink -f "$path"
+  readlink -m "$path"
 }
 
 case "$first_arg" in
@@ -95,8 +95,8 @@ fi
 
 case "$subcommand" in
   start)
-    if ! vm_is_under_code_dir "$workspace_dir"; then
-      echo "Warning: '$workspace_dir' is not under \$HOME/code." >&2
+    if ! vm_is_under_home "$workspace_dir"; then
+      echo "Warning: '$workspace_dir' is outside \$HOME." >&2
       read -r -p "Continue anyway? [y/N] " reply
       case "$reply" in
         [yY]|[yY][eE][sS]) ;;
