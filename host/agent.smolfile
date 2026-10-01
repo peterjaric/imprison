@@ -1,0 +1,16 @@
+image = "fedora:latest"
+
+# Keep the machine running so `smolvm machine exec -it` can attach into it.
+entrypoint = ["/bin/sh", "-c", "sleep infinity"]
+
+cpus = 2
+memory = 4096
+net = true
+
+[dev]
+volumes = [
+  "./guest:/scripts:ro"
+]
+
+# Add/remove software in scripts/packages.txt instead of editing this list.
+init = ["/scripts/setup.sh"]

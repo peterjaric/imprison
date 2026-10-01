@@ -1,0 +1,35 @@
+# dnf packages (or @groups) to install in the VM, one per line.
+# Blank lines and lines starting with # are ignored.
+# Edit this file to add/remove software.
+#
+# For packages needed only in one workspace, set PACKAGES in that workspace's
+# imprison.config instead (see imprison.sh --help).
+
+# Required by scripts/*.sh (pgrep) and for git-cloned workspaces / installer scripts.
+procps-ng
+git
+curl
+
+# Node >=22.19 required by the pi installer; installing it here lets that
+# installer skip its interactive "install Node.js?" prompt.
+nodejs24
+nodejs24-npm
+
+# Utils for agents
+ripgrep
+fd-find
+
+# Various other good to have packages
+hostname
+iputils
+which
+expect
+jq
+tree
+tmux
+htop
+lsof
+bind-utils
+less
+wget
+unzip
