@@ -37,12 +37,14 @@ EOF
 
 first_arg="${1:-}"
 script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+invocation_dir="$PWD"
 
 # Resolve a workspace path argument to an absolute directory.
 # If require_exists is "1", fail unless the directory already exists.
 resolve_workspace_dir() {
   local path="$1"
   local require_exists="${2:-1}"
+  [[ "$path" == /* ]] || path="$invocation_dir/$path"
   if [[ "$require_exists" == "1" ]] && [[ ! -d "$path" ]]; then
     echo "Workspace directory '$path' does not exist." >&2
     exit 1
