@@ -5,28 +5,35 @@ Runs the [pi](https://pi.dev) coding agent inside an isolated [smolvm](https://g
 ## Getting started
 
 1. [Install smolvm](https://github.com/smol-machines/smolvm#install) and make sure it's on your `PATH`.
-2. From your project directory, start the agent:
+2. Start the agent for a project directory:
 
    ```sh
-   imprison.sh start
+   imprison.sh <path/to/project>
    ```
 
-   This creates (if needed) and attaches to a VM for the current directory, then runs `pi`.
+   For example, to start the agent for a project located in the current directory:
+
+   ```sh
+   imprison.sh .
+   ```
+
+   This creates (if needed) and attaches to a VM for that directory, then runs `pi`.
 3. Optionally configure extra packages before first creating the VM (also run at create if no configuration exists):
 
    ```sh
-   imprison.sh config
+   imprison.sh config <path/to/project>
    ```
 
 4. Other commands:
 
    ```sh
-   imprison.sh stop       # stop the machine for this workspace
-   imprison.sh stop all   # stop every machine, no prompt
-   imprison.sh list       # list all machines and their state
-   imprison.sh delete     # stop and delete a machine
-   imprison.sh delete all # stop and delete every machine, one y/N prompt
-   imprison.sh help       # show usage
+   imprison.sh stop <path/to/project>   # stop the machine for the specified workspace
+   imprison.sh stop all                # stop every machine, no prompt
+   imprison.sh list                    # list all machines and their state
+   imprison.sh delete                  # prompt to pick a machine to stop and delete
+   imprison.sh delete <path/to/project>  # stop and delete the machine for the specified workspace
+   imprison.sh delete all               # stop and delete every machine
+   imprison.sh help                     # show usage
    ```
 
 ## Supported Customizations in `imprison.config`

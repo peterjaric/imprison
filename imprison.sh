@@ -1,30 +1,26 @@
 #!/usr/bin/env bash
 
-#####
-#
-# Run Pi inside a VM.
-#
-# If the smolfile has changed, delete the machine first so it is recreated.
-#
-#####
+# Run Pi inside a VM. See README.md for usage and configuration details.
 
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: imprison.sh <start [cmd]|stop [all]|delete [all]|list|config|help>
+Usage: imprison.sh <path [cmd]|stop <path|all>|delete [path|all]|list|config <path>|help>
 
-  start [cmd]  Create/start the machine for the current workspace directory
+  <path> [cmd] Create/start the machine for the workspace directory at <path>
                and attach interactively, running cmd (default: pi).
-  stop         Stop the machine for the current workspace directory.
+  stop <path>  Stop the machine for the workspace directory at <path>.
   stop all     Stop every machine this tool created.
-  delete       List all machines this tool created and prompt for one to
-               stop (if running) and delete.
+  delete [path] List all machines this tool created and prompt for one to
+               stop (if running) and delete; if <path> is given, stop
+               (if running) and delete that workspace directory's machine
+               directly, after confirmation.
   delete all   Prompt once, then stop (if running) and delete every machine
                this tool created.
   list         List all machines this tool created, with running state.
-  config       Interactively select extra packages and write them to
-               imprison.config in the current workspace directory.
+  config <path> Interactively select extra packages and write them to
+               imprison.config in the workspace directory at <path>.
   help         Show this help message.
 
 imprison.config:
@@ -35,33 +31,65 @@ imprison.config:
               Example: PACKAGES="ripgrep fzf tmux"
     CUSTOM_PI_HOME  Host directory mounted at /root/.pi in the guest.
                     Default: $HOME/.imprison/pi
-  Use imprison.sh config to interactively create this file.
+  Use imprison.sh config <path> to interactively create this file.
 EOF
 }
 
-subcommand="${1:-}"
-
+first_arg="${1:-}"
 script_path="$(readlink -f "${BASH_SOURCE[0]}")"
-workspace_dir="$PWD"
 
-case "$subcommand" in
-  start|stop|delete|list|config)
-    tool_dir="$(cd "$(dirname "$script_path")" && pwd)"
-    cd "$tool_dir"
-    . ./host/vm.sh
-    if [[ "$subcommand" == "start" ]] || { [[ "$subcommand" == "stop" ]] && [[ "${2:-}" != "all" ]]; }; then
-      name="$(vm_machine_name "$workspace_dir")"
-    fi
+# Resolve a workspace path argument to an absolute directory.
+# If require_exists is "1", fail unless the directory already exists.
+resolve_workspace_dir() {
+  local path="$1"
+  local require_exists="${2:-1}"
+  if [[ "$require_exists" == "1" ]] && [[ ! -d "$path" ]]; then
+    echo "Workspace directory '$path' does not exist." >&2
+    exit 1
+  fi
+  readlink -f "$path"
+}
+
+case "$first_arg" in
+  stop|delete|list|config)
+    subcommand="$first_arg"
     ;;
   ""|help)
     usage
     exit 0
     ;;
   *)
-    usage
-    exit 1
+    subcommand="start"
     ;;
 esac
+
+tool_dir="$(cd "$(dirname "$script_path")" && pwd)"
+cd "$tool_dir"
+. ./host/vm.sh
+
+# Determine the path argument (if any) for the chosen subcommand.
+path_arg=""
+case "$subcommand" in
+  start) path_arg="$first_arg" ;;
+  stop|delete|config) path_arg="${2:-}" ;;
+esac
+
+if [[ -z "$path_arg" ]] && [[ "$subcommand" == "start" || "$subcommand" == "stop" || "$subcommand" == "config" ]]; then
+  echo "Usage: imprison.sh <path [cmd]|stop <path|all>|delete [path|all]|list|config <path>|help>" >&2
+  exit 1
+fi
+
+# Resolve the workspace directory and machine name once, unless the path
+# argument is the special "all" value (handled separately below) or absent
+# (e.g. "delete" with no path, which falls back to interactive selection).
+if [[ -n "$path_arg" ]] && [[ "$path_arg" != "all" ]]; then
+  require_exists=0
+  if [[ "$subcommand" == "start" || "$subcommand" == "config" ]]; then
+    require_exists=1
+  fi
+  workspace_dir="$(resolve_workspace_dir "$path_arg" "$require_exists")"
+  name="$(vm_machine_name "$workspace_dir")"
+fi
 
 case "$subcommand" in
   start)
@@ -94,7 +122,7 @@ case "$subcommand" in
     ;;
 
   stop)
-    if [[ "${2:-}" == "all" ]]; then
+    if [[ "$path_arg" == "all" ]]; then
       vm_stop_all
     else
       vm_stop "$name"
@@ -102,11 +130,11 @@ case "$subcommand" in
     ;;
 
   delete)
-    if [[ "${2:-}" == "all" ]]; then
+    if [[ "$path_arg" == "all" ]]; then
       vm_delete_all
       exit 0
     fi
-    if ! name="$(vm_select_machine)"; then
+    if [[ -z "$path_arg" ]] && ! name="$(vm_select_machine)"; then
       exit 0
     fi
     read -r -p "Delete machine '$name'? [y/N] " reply
