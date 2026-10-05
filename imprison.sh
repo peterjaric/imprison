@@ -120,7 +120,9 @@ case "$subcommand" in
 
     vm_wait_ready "$name"
 
-    vm_attach "$name" "$workspace_dir" "${2:-pi}"
+    guest_cmd="${2:-pi}"
+    guest_parameters=("${@:3}")
+    vm_attach "$name" "$workspace_dir" "$guest_cmd" "${guest_parameters[@]}"
     ;;
 
   stop)
