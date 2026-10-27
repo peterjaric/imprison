@@ -121,10 +121,33 @@ vm_attach() {
   # arguments in "$@" that is passed to the launch-agent script.
   shift 2
   local guest_dir="/$(basename "$workspace_dir")"
-  exec smolvm machine exec -it --name "$name" -w "$guest_dir" -- /scripts/launch-agent.sh "${@:-pi}"
+
+  local saved_stty=""
+  if [[ -t 0 ]]; then
+    saved_stty="$(stty -g 2>/dev/null || true)"
+  fi
+
+  local status=0
+  smolvm machine exec -it --name "$name" -w "$guest_dir" -- /scripts/launch-agent.sh "${@:-pi}" || status=$?
+
+  vm_restore_terminal "$saved_stty"
+  return "$status"
 }
 
-# Machine names this tool created, one per line (empty if none).
+# Undo terminal modes the guest program may have left enabled if it was killed
+# (e.g. the VM was stopped externally)
+vm_restore_terminal() {
+  local saved_stty="$1"
+  if [[ -n "$saved_stty" ]]; then
+    stty "$saved_stty" 2>/dev/null || stty sane 2>/dev/null || true
+  fi
+  if [[ -t 1 ]]; then
+    # Disable kitty/modifyOtherKeys key encodings, bracketed paste, mouse reporting, app keypad modes and alt screen; show cursor; reset colors.
+    printf '\e[<u\e[>4;0m\e[?2004l\e[?1000l\e[?1002l\e[?1003l\e[?1006l\e[?1l\e>\e[?1049l\e[?25h\e[0m'
+  fi
+}
+
+# Machine names this tool created
 vm_list_names() {
   smolvm machine ls --quiet | grep "^${MACHINE_PREFIX}" | sort || true
 }
